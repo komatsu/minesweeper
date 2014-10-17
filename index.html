@@ -1,0 +1,155 @@
+<!-- Make sure you run this in a browser with internet connection so you can get jQuery -->
+<!-- Note that the algorithm can handle square game sizes other than 5x5 and can also
+  handle different number of mines -->
+<html>
+  <head>
+    <title>Kazu's Minesweeper</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <style>
+      .row {
+        height: 35px;
+      }
+      .space {
+        width: 50px;
+        height: 50px;
+        line-height: 50px;
+        float: left;
+        font-size: 24px;
+        text-align: center;
+        border: 1px solid black;
+      }
+      .space:hover {
+        cursor: pointer;
+      }
+      .space.mine {
+        color: red;
+        font-weight: bold;
+      }
+      .space.disabled:hover {
+        cursor: default;
+      }
+      
+    </style>
+    <script>
+      $(document).ready(function() {
+        var Minesweeper = function(size, numMines) {
+          //Note that the algorithm should handle sizes other than 4x4 and
+          //number of mines other than 4.
+
+          this.size = size;
+          this.numSpacesCleared = 0;
+          this.totalSpacesToClear = Math.pow(size, 2) - numMines;
+          this.numMines = numMines;
+          this.initMineField(size);
+          this.initMines(size, numMines);
+
+          this.$mineFieldContainer = $("#minefield");
+          this.$message = $("#message");
+
+          //console.log("MINE FIELD", this.mineField);
+          this.renderMineField();
+        }
+
+        //Create a zero-initialized array of arrays to represent
+        //the mine field.
+        Minesweeper.prototype.initMineField = function(){
+          this.mineField = new Array(this.size);
+
+          for (var i = 0; i < this.size; i++) {
+            this.mineField[i] = new Array(this.size);
+
+            for (var ii = 0; ii < this.size; ii++) {
+              this.mineField[i][ii] = 0;
+            }
+          }
+        };
+
+        //Generate random mines. -1 will denote a mine.
+        Minesweeper.prototype.initMines = function() {
+          var minesToPlace = this.numMines,
+              mineSpace,
+              space,
+              x,
+              y;
+
+          while (minesToPlace) {
+            mineSpace = Math.floor(Math.random() * Math.pow(this.size, 2));
+            x = Math.floor(mineSpace / this.size);
+            y = mineSpace % this.size;
+
+            if (this.mineField[x][y] !== -1) { //avoid repeats
+              this.mineField[x][y] = -1; // -1 will denote mine
+
+              //Increment count for all spaces around this new mine
+              for (var i = Math.max(0, x - 1); i <= x + 1 && i < this.size; i++) {
+                for (var ii = Math.max(0, y - 1); ii <= y + 1 && ii < this.size; ii++) {
+                  if (this.mineField[i][ii] !== -1) {
+                    this.mineField[i][ii]++;
+                  };
+                }
+              } 
+
+              minesToPlace--;
+            }
+          }
+        }
+
+        Minesweeper.prototype.renderMineField = function() {
+          // Normally, I would use handlebars templates, but for this exercise,
+          // I'm going to just inject directly from the js code.
+
+          var html = "";
+
+          for (var i = 0; i < this.mineField.length; i++) {
+            html += "<div class='row'>"
+            for (var ii = 0; ii < this.mineField[i].length; ii++) {
+              html += "<span class='space' data-x-coord='" + i  + "' data-y-coord='" + ii + "'/>"
+            }
+            html += "</div><br/>"
+          }
+
+          this.$mineFieldContainer.html(html);
+          this.$mineFieldContainer.find(".space").click(this.handleSpaceClick.bind(this));
+        };
+
+        Minesweeper.prototype.handleSpaceClick = function(e) {
+          var $space = $(e.target),
+              x,
+              y;
+
+          e.preventDefault();
+          x = $space.data("x-coord");
+          y = $space.data("y-coord");
+
+          if (this.mineField[x][y] === -1) {
+            $space.addClass("mine");
+            $space.html("X");
+            this.$message.html("You hit a mine. GAME OVER.");
+            this.disableAllSpaces();
+            return;
+          }
+          else {
+            $space.off("click").addClass("disabled");
+            $space.html(this.mineField[x][y]);
+            if (++this.numSpacesCleared === this.totalSpacesToClear) {
+              this.$message.html("YOU WIN!");
+              this.disableAllSpaces();
+            }
+          }
+        }
+
+        Minesweeper.prototype.disableAllSpaces = function() {
+          this.$mineFieldContainer.find(".space").off("click").addClass("disabled");
+        }
+
+        new Minesweeper(5, 4); //5x5 square, with 4 mines
+      });
+    </script>
+  </head>
+  <body>
+    <div id="message">
+      This is a simple 5x5 minesweeper game, with 4 mines. Click a space to start playing.
+    </div>
+    <div id="minefield" />
+  </body>
+</html>
